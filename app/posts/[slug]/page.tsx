@@ -6,6 +6,7 @@ import { getPostBySlug } from '@/lib/posts'
 import { ArrowLeftIcon } from '@radix-ui/react-icons'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
+import MDXContent from '@/components/mdx-content'
 
 
 export default async function Post({ params }: { params: { slug: string } }) {
@@ -49,7 +50,7 @@ export default async function Post({ params }: { params: { slug: string } }) {
                 </header>
 
                 <main className='prose mt-16 dark:prose-invert'>
-                    <MDXRemote source={content} />
+                    <MDXContent source={content} />
                 </main>
 
             </div>
