@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import authorImage from '@/public/images/authors/paulalwin.jpeg'
+import authorImage from '@/public/images/me/paulalwin.jpeg'
 import Link from 'next/link'
 
 export default function Intro() {
@@ -18,15 +18,17 @@ export default function Intro() {
                 </Link>
             </div>
             <div className='relative'>
-                <Image
-                    className='flex-1 rounded-lg grayscale'
-                    src={authorImage}
-                    alt='Paul Alwin'
-                    width={175}
-                    height={175}
-                    priority
-                />
+                <Link href="/aboutme">
+                    <Image
+                        className='flex-1 rounded-lg'
+                        src={authorImage}
+                        alt='Paul Alwin'
+                        width={175}
+                        height={175}
+                        priority
+                    />
+                </Link>
             </div>
-        </section>
+        </section >
     )
 }
