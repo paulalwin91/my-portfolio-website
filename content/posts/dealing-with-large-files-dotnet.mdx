@@ -1,0 +1,77 @@
+---
+  title: Dealing with large files in .NET Core
+  summary: This post will explain one way of dealing with large files in a memory efficient way.
+  image: /images/posts/large-file.webp
+  author: 'Paul Alwin'
+  publishedAt: '2025-03-23'
+---
+
+When dealing with large files, it’s important to avoid loading everything into memory.
+Here’s a simple approach using StreamReader and IEnumerable for deferred execution and
+lazy loading of lines only when needed.
+
+This code reads the file line by line, skipping and taking chunks of lines at a time using the
+Skip and Take LINQ methods. It processes files in chunks without consuming excessive memory, which is perfect for handling large datasets.
+
+## Key Benefits:
+
+- **Memory Efficient**: Only one line is loaded at a time.  
+- **Deferred Execution**: Lines are read only when enumerated.  
+- **Flexible**: Easily handle chunks of data instead of loading everything.
+
+
+## Sample code
+
+```
+var skip = 0;
+var take = 5;
+
+var lines = GetLines(); // Get the IEnumerable once
+
+// Skip and take directly on the enumerable
+while (lines.Skip(skip).Take(take).Any()) 
+{
+    Console.WriteLine($"{Environment.NewLine}New Chunk");
+
+    // Take a chunk of lines
+    var currentChunk = lines.Skip(skip).Take(take);
+    foreach (var line in currentChunk)
+        Console.WriteLine(line);
+
+    // Move the skip value to get the next chunk
+    skip += take; 
+}
+
+IEnumerable<string> GetLines()
+{
+    using StreamReader reader = 
+            new("/Users/paulalwin91/Downloads/sample_text.txt");
+    string line = "";
+    while ((line = reader.ReadLine()) != null)
+    {
+        yield return line;
+    }
+}
+
+```
+
+## Output
+
+```
+New Chunk
+Line 1
+Line 2
+Line 3
+Line 4
+Line 5
+
+New Chunk
+Line 6
+Line 7
+Line 8
+Line 9
+Line 10
+
+```
+
+Try it out!
