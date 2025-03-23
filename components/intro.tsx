@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import authorImage from '@/public/images/authors/paulalwin.jpeg'
+import Link from 'next/link'
 
 export default function Intro() {
     return (
@@ -11,6 +12,10 @@ export default function Intro() {
                     passionate about learning new technologies and sharing knowledge with
                     others.
                 </p>
+                <Link href="/resume"
+                    className="mt-4 inline-flex items-center gap-2 text-muted-foreground underline decoration-1 underline-offset-2 transition-colors hover:text-foreground">
+                    <span>More about me</span>
+                </Link>
             </div>
             <div className='relative'>
                 <Image

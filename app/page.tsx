@@ -1,4 +1,5 @@
 import Intro from "@/components/intro";
+import Resume from "@/components/my-resume";
 import ProjectsWithSearch from "@/components/projects-with-search";
 import RecentPosts from "@/components/recent-posts";
 import RecentProjects from "@/components/recent-projects";
