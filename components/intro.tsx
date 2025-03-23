@@ -12,7 +12,7 @@ export default function Intro() {
                     passionate about learning new technologies and sharing knowledge with
                     others.
                 </p>
-                <Link href="/resume"
+                <Link href="/aboutme"
                     className="mt-4 inline-flex items-center gap-2 text-muted-foreground underline decoration-1 underline-offset-2 transition-colors hover:text-foreground">
                     <span>More about me</span>
                 </Link>

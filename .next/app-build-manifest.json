@@ -36,10 +36,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/_not-found/page.js"
     ],
-    "/resume/page": [
+    "/aboutme/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/resume/page.js"
+      "static/chunks/app/aboutme/page.js"
     ]
   }
 }
