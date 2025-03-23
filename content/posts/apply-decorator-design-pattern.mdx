@@ -1,0 +1,200 @@
+---
+  title: Refactoring using decorator pattern in c#
+  summary: Simple elegant way to add more behaviour to existing implementation using Decorators.
+  image: /images/posts/decorator.png
+  author: 'Paul Alwin'
+  publishedAt: '2025-03-23'
+---
+
+In our recent dotnet core project migration from Windows to a UNIX server,
+addressing the difference in folder paths between the two operating systems was important.
+While Windows paths typically use backslashes like 
+D:\project, UNIX paths utilize forward slashes such as /home/user/project. 
+
+We needed to come up with a approach with minimal changes which would help our code to 
+run on Unix or Windows - keeping it OS Agnostic.
+
+So I decided to use the Decorator Pattern to come up with an Decorated 
+implementation of the FileHelper class (a wrapper on top of System.IO.File)
+- FileHelperMultiOs - which transformed whatever path was sent to it to 
+Os Specific Path and then called the existing implementation of FileHelper.
+ We used the similar approach for helper classes for Paths and Directories.
+
+By simply substituting the FileHelper instance with its decorated counterpart 
+in the constructor, the solution seamlessly adapted to different OS environments. 
+This seemed to follow the Open Closed princple of SOLID principles!
+
+## Sample code
+
+```
+using System;
+using System.IO;
+
+namespace FileHelperExample
+{
+    // Define the IFileHelper interface with a few basic methods.
+    public interface IFileHelper
+    {
+        string ReadAllText(string filePath);
+        void WriteAllText(string filePath, string content);
+        void Delete(string filePath);
+    }
+
+    // FileHelper class that wraps the System.IO.File class and implements IFileHelper.
+    public class FileHelper : IFileHelper
+    {
+        public string ReadAllText(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+
+            return File.ReadAllText(filePath); // Call to System.IO.File
+        }
+
+        public void WriteAllText(string filePath, string content)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+
+            File.WriteAllText(filePath, content); // Call to System.IO.File
+        }
+
+        public void Delete(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath); // Call to System.IO.File
+            }
+            else
+            {
+                throw new FileNotFoundException("The specified file does not exist.", filePath);
+            }
+        }
+    }
+
+    // Example usage
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            IFileHelper fileHelper = new FileHelper();
+            string path = "testfile.txt";
+
+            try
+            {
+                // Write content to the file
+                fileHelper.WriteAllText(path, "Hello, FileHelper!");
+
+                // Read content from the file
+                string content = fileHelper.ReadAllText(path);
+                Console.WriteLine("File Content: " + content);
+
+                // Delete the file
+                fileHelper.Delete(path);
+                Console.WriteLine("File deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
+        }
+    }
+}
+
+```
+
+## MultiOs representation
+
+```
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+
+namespace FileHelperExample
+{
+    public class FileHelperMultiOs : IFileHelper
+    {
+        private readonly IFileHelper _fileHelper;
+
+        public FileHelperMultiOs(IFileHelper fileHelper)
+        {
+            _fileHelper = fileHelper ?? throw new ArgumentNullException(nameof(fileHelper));
+        }
+
+        public string ReadAllText(string filePath)
+        {
+            string transformedPath = TransformPath(filePath);
+            return _fileHelper.ReadAllText(transformedPath);
+        }
+
+        public void WriteAllText(string filePath, string content)
+        {
+            string transformedPath = TransformPath(filePath);
+            _fileHelper.WriteAllText(transformedPath, content);
+        }
+
+        public void Delete(string filePath)
+        {
+            string transformedPath = TransformPath(filePath);
+            _fileHelper.Delete(transformedPath);
+        }
+
+        // This method transforms the file path according to the OS (Windows vs. Unix-based)
+        private string TransformPath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                throw new ArgumentException("File path cannot be null or empty.", nameof(path));
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Windows-specific path transformation (e.g., converting Unix-style '/' to Windows-style '\')
+                path = path.Replace("/", "\\");
+            }
+            else
+            {
+                // Unix-specific path transformation (converting Windows-style '\' to '/')
+                path = path.Replace("\\", "/");
+            }
+
+            return path;
+        }
+    }
+
+    // Example usage
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // Initialize FileHelper and FileHelperMultiOs
+            IFileHelper fileHelper = new FileHelper();
+            IFileHelper multiOsFileHelper = new FileHelperMultiOs(fileHelper);
+
+            string path = "testfile.txt";
+
+            try
+            {
+                // Write content using FileHelperMultiOs (path gets transformed internally)
+                multiOsFileHelper.WriteAllText(path, "Hello, Multi-OS FileHelper!");
+
+                // Read content from the file using Multi-OS file helper
+                string content = multiOsFileHelper.ReadAllText(path);
+                Console.WriteLine("File Content: " + content);
+
+                // Delete the file
+                multiOsFileHelper.Delete(path);
+                Console.WriteLine("File deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
+        }
+    }
+}
+
+```
+
+Try it out!
