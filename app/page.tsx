@@ -11,9 +11,9 @@ export default function Home() {
       <div className='container max-w-4xl'>
         <Intro />
         <RecentPosts />
-        <div className="mt-10">
+        {/* <div className="mt-10">
           <RecentProjects />
-        </div>
+        </div> */}
       </div>
     </section>
   )
