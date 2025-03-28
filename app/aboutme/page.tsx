@@ -18,16 +18,16 @@ export default async function AboutMe() {
                         />
                     </div>
                     <div className="flex-1">
-                        <p>Hello! I’m Paul Alwin, a senior software developer in .net based in Montreal, currently working at Société Générale.
+                        <p>Hello! I’m Paul Alwin, a senior software developer in .net based in Montreal.
                             With over a decade of experience in the software industry, my journey began in India, where I developed a passion for technology.
                             In 2017, I moved here to Canada to pursue a Master’s in Software Engineering, and now working in Societe Generale in Montreal.</p>
-                        <br />                        
+                        <br />
                         <p> Majority of my expertise lies in back-end development, specializing in C#, ASP.NET Core, and SQL,
-                            with extensive experience in CI/CD pipelines using Jenkins. I also am working on my front end skills by learning 
+                            with extensive experience in CI/CD pipelines using Jenkins. I also am working on my front end skills by learning
                             React and Next js - for example this website is build on Next.js hosted on Vercel.</p>
                         <br />
-                        <p>I’m passionate about technology and am always trying to improve my skills by learning and keeping myself updated 
-                            with the latest advancements in the software industry. At work I have a growth mindset by proactivly going for challenging tasks 
+                        <p>I’m passionate about technology and am always trying to improve my skills by learning and keeping myself updated
+                            with the latest advancements in the software industry. At work I have a growth mindset by proactivly going for challenging tasks
                             and be on the lookout for improving existing processes.</p>
                         <br />
                         <p>This year, I’m aiming to enhance my skills further by obtaining certifications in Azure Cloud.</p>
