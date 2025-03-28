@@ -8,14 +8,12 @@ export default function Intro() {
             <div className='mt-2 flex-1 md:mt-0'>
                 <h1 className='title no-underline'>Hey, I&#39;m Paul.</h1>
                 <p className='mt-3 font-light text-muted-foreground'>
-                    I&#39;m a software engineer based in Montreal, Canada. I&#39;m
-                    passionate about learning new technologies and sharing knowledge with
-                    others.
+                    I&#39;m a senior software engineer in .Net with over 10 years of experience based in Montreal, Canada -
+                    passionate about learning new technologies and sharing knowledge with others. Click below for more details and my resume.
                 </p>
-                <Link href="/aboutme"
-                    className="mt-4 inline-flex items-center gap-2 text-muted-foreground underline decoration-1 underline-offset-2 transition-colors hover:text-foreground">
-                    <span>More about me</span>
-                </Link>
+                <p className='mt-3 font-light text-muted-foreground'>
+                    <strong>Key Skills - C# | ASP.NET Core | SQL | CI/CD (Jenkins) | Powershell | Azure | React | Next.js | Angular</strong>
+                </p>
             </div>
             <div className='relative'>
                 <Link href="/aboutme">
