@@ -15,9 +15,9 @@ export default function Header() {
                     <li className='transition-colors hover:text-foreground'>
                         <Link href='/posts'>Posts</Link>
                     </li>
-                    {/* <li className='transition-colors hover:text-foreground'>
+                    <li className='transition-colors hover:text-foreground'>
                         <Link href='/projects'>Projects</Link>
-                    </li> */}
+                    </li>
                     <li className='transition-colors hover:text-foreground'>
                         <Link href='/aboutme' title='More details and my resume.'>AboutMe</Link>
                     </li>
