@@ -45,6 +45,7 @@ export default async function Post({ params }: { params: { slug: string } }) {
                             alt={title || ''}
                             className='object-cover'
                             fill
+                            priority
                         />
                     </div>
                 )}
