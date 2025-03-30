@@ -10,8 +10,15 @@ export default function ToDoApp()
 
   const [items, setItems] = useState(() =>
   {
-    return JSON.parse(localStorage.getItem('items')) || []
+    if (typeof window !== "undefined")
+    {
+      return JSON.parse(localStorage.getItem('items')) || []
+    } else
+    {
+      return []
+    }
   })
+
 
   useEffect(() =>
   {
