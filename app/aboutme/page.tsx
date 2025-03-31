@@ -32,7 +32,7 @@ export default async function AboutMe() {
                         <br />
                         <p>This year, I’m aiming to enhance my skills further by obtaining certifications in Azure Cloud.</p>
                         <br />
-                        <p>If you’re interested in connecting or have any questions, feel free to drop me an <a href="mailto:paulalwin.it@gmail.com">email</a>!</p>
+                        <p>If you’re interested in connecting or have any questions, feel free to drop me an <b><i><a href="mailto:paulalwin.it@gmail.com">email!</a></i></b></p>
                     </div>
                 </div>
                 <div className="p-6 flex flex-row justify-end gap-5">
