@@ -1,0 +1,234 @@
+---
+  title: Reading large files using Spans - benchmarked!
+  summary: A little bit about spans and simple test of its performance.
+  image: /images/posts/spans.jpeg
+  author: 'Paul Alwin'
+  publishedAt: '2025-04-05'
+---
+
+## Understanding `Span<T>` in C#
+
+When working with large data or performance-critical code in C#, avoiding unnecessary memory allocations can make a big difference. This is where `Span<T>` comes in.
+
+## What Are `Span<T>` and `ReadOnlySpan<T>`?
+
+`Span<T>` is a **stack-only** type that allows you to work with slices of arrays, strings, or memory buffers **without allocating new memory**. It provides a lightweight view over a contiguous region of memory.
+
+## Why Was `Span<T>` Introduced?
+
+Before `Span<T>`, processing large strings or memory buffers meant:
+
+- Creating temporary arrays and strings  
+- Generating a lot of garbage collector (GC) pressure  
+- Slower performance due to memory allocations  
+
+To address this, .NET Core introduced `Span<T>` and `ReadOnlySpan<T>` in the `System.Memory` namespace.
+
+## Benefits of Using `Span<T>`
+
+- **Zero allocations**: Operates on stack memory or existing buffers  
+- **High performance**: Especially useful in loops and parsing scenarios  
+- **Memory safe**: Compiler-enforced stack usage prevents memory leaks  
+- **Versatile**: Works with arrays, strings, `stackalloc`, and unmanaged memory  
+
+
+## Benchmarking with BenchmarkDotNet
+
+To measure the impact of using `Span<T>` vs traditional methods, we can use **BenchmarkDotNet**, a powerful benchmarking library for .NET.
+
+### Install the NuGet package
+
+```
+dotnet add package BenchmarkDotNet
+```
+## Test different methods for reading a large csv
+
+All the 3 methods use the test files from this source <a href="https://github.com/datablist/sample-csv-files" target="_blank">source-files</a>.
+
+
+### 1. Simple method which loads the file in memory
+
+- This is a naive approach where the entire file is loaded into memory, and `Split` is used on each line.
+- Memory allocations will be very high since:
+  - The full file content resides in memory.
+  - Each `Split` call generates multiple new strings on the heap.
+
+
+```
+
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+
+// Enables memory diagnostics and a short benchmark run
+[MemoryDiagnoser]
+[ShortRunJob]
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Runs the benchmarks defined in this class
+        var summary = BenchmarkRunner.Run<Program>();
+    }
+
+    // Benchmark 1: Read the entire file into memory and split lines using string.Split
+    [Benchmark]
+    public void ReadFileSimple()
+    {
+        // Loads all lines into memory at once
+        var lines = File.ReadAllLines("/Users/paulalwin91/Downloads/customers-2000000.csv");
+
+        foreach (var line in lines)
+        {
+            // Splits each line by commas — creates new string objects for each column
+            var columns = line.Split(',');
+            // Console.WriteLine($"{string.Join(", ", columns)}"); // disabled for benchmark performance
+        }
+    }
+}
+
+```
+
+### 2. Stream the file line by line
+
+- This approach is significantly better since only one line is loaded into memory at a time.
+- However, allocations still occur—first from the single line string itself, and then from the `Split` function, which creates multiple new strings for each column.
+
+```
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+
+// Enables memory diagnostics and a short benchmark run
+[MemoryDiagnoser]
+[ShortRunJob]
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Runs the benchmarks defined in this class
+        var summary = BenchmarkRunner.Run<Program>();
+    }
+
+    // Benchmark 1: Read the entire file into memory and split lines using string.Split
+    [Benchmark]
+    public void ReadFileStreamSplit()
+    {
+        using StreamReader reader = new StreamReader("/Users/paulalwin91/Downloads/customers-2000000.csv");
+        string line;
+        while ((line = reader.ReadLine()) != null) //allocates one line on the heap
+        {
+            // Again, Split allocates new string instances
+            var columns = line.Split(',');
+            // Console.WriteLine($"{string.Join(", ", columns)}"); // disabled for benchmark performance
+        }
+    }
+}
+
+```
+
+### 3. Stream the file line by line and use Spans instead of Split
+
+- This is the most efficient option in terms of memory usage—memory allocation only occurs during the `ReadLine` operation, which is unavoidable.
+- Instead of using `Split`, we use `Slice`, which returns a `ReadOnlySpan<char>`—a lightweight, non-allocating view over the string.
+
+```
+
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+
+// Enables memory diagnostics and a short benchmark run
+[MemoryDiagnoser]
+[ShortRunJob]
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Runs the benchmarks defined in this class
+        var summary = BenchmarkRunner.Run<Program>();
+    }
+    [Benchmark]
+    public void ReadFileStreamAndSpans()
+    {
+        using StreamReader reader = new StreamReader("/Users/paulalwin91/Downloads/customers-2000000.csv");
+        ReadOnlySpan<char> charcLine;
+
+        // Read line by line using ReadLine(), convert to Span<char> with AsSpan()
+        while ((charcLine = reader.ReadLine().AsSpan()) != null) //allocates one line on the heap and then converts to span, unavoidable
+        {
+            ReadOnlySpan<char> column;
+
+            // Extract columns using slicing instead of allocating new strings
+            while ((column = GetNextColumn(charcLine)).Length > 0)
+            {
+                // Console.Write($"{column} "); // Uncomment to debug
+                if (charcLine.Length == column.Length)
+                    break;
+
+                // Slice the remaining part of the line (skip over comma)
+                charcLine = charcLine.Slice(column.Length + 1);
+            }
+        }
+    }
+
+    // Helper method to extract the next column as a ReadOnlySpan<char>
+    private ReadOnlySpan<char> GetNextColumn(ReadOnlySpan<char> line)
+    {
+        // Find the index of the next comma or end of line
+        int index = line.IndexOf(',');
+        if (index == -1)
+            return line; // last column
+        return line.Slice(0, index);
+    }
+}
+
+
+```
+
+
+## Output 
+
+<img
+  src="/images/posts/span-results.jpeg"
+  alt="My Span Illustration"
+  style={{ width: '100%', maxWidth: '800px', height: 'auto' }}
+/>
+
+<div style={{ textAlign: 'right', fontStyle: 'italic' }}>
+  Sorry for the small image!
+</div>
+
+### Legends
+```
+  Mean      : Arithmetic mean of all measurements
+  Gen0      : GC Generation 0 collects per 1000 operations
+  Gen1      : GC Generation 1 collects per 1000 operations
+  Gen2      : GC Generation 2 collects per 1000 operations
+  Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  1 s       : 1 Second (1 sec)
+
+```
+
+### Analysis
+
+#### `ReadFileSimple`
+
+- **Highest memory allocation** among all three methods.
+-  Creates many temporary and long-lived strings due to reading the full file into memory and using `string.Split`.
+-  **Triggers Gen0, Gen1, and Gen2 GCs**, showing a high memory pressure, especially with large data sets.
+
+
+---
+
+#### `ReadFileStreamSplit`
+
+-  **Second highest in memory usage**, primarily because `string.Split` creates multiple short-lived string instances per line.
+-  Processes the file line by line, which improves performance compared to `ReadFileSimple`.
+-  Only Gen0 collections are triggered, since most allocations are short-lived.
+
+
+---
+
+#### `ReadFileStreamAndSpans`
+
+-  **Most memory-efficient** method.
+-  Uses `ReadLine()` for streaming and `ReadOnlySpan<char>` to parse columns without allocations.
+-  Significantly fewer allocations and **no Gen1 or Gen2 GC runs**.

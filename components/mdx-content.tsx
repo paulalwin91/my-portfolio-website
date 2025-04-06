@@ -20,9 +20,12 @@ export default function MDXContent(
     props: JSX.IntrinsicAttributes & MDXRemoteProps
 ) {
     return (
-        <MDXRemote
-            {...props}
-            components={{ ...components, ...(props.components || {}) }}
-        />
+        <div style={{}}>
+            <MDXRemote
+                {...props}
+                components={{ ...components, ...(props.components || {}) }}
+            />
+        </div>
+
     )
 }
