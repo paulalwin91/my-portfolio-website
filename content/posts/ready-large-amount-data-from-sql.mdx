@@ -1,0 +1,175 @@
+---
+title: Returning Large Number of Records from SQL to C#
+summary: How to efficiently handle large datasets returned from SQL stored procedures in C#
+image: /images/posts/large-number-sql-records.png
+author: 'Paul Alwin'
+publishedAt: '2025-05-06'
+---
+
+In one of our modules, we needed to retrieve around **100,000–200,000** records from the database using a stored procedure.  
+This data was fetched using **ADO.NET** and eventually written to a file after being converted to JSON.
+
+Everything worked well — until the number of records increased to **500,000–600,000**. In our **non-production environments**, we started encountering **out-of-memory exceptions**.
+
+Let’s explore what went wrong, and how we solved it.
+
+## Initial Approach (Problematic)
+
+The following sample demonstrates the original approach using ADO.NET and `SqlDataAdapter` to fill a `DataTable`, which was then processed into a list of JSON strings.
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+
+public class StoredProcCaller
+{
+    public List<string> GetDataAsJson(string connectionString, string storedProcName, Dictionary<string, object> parameters)
+    {
+        var jsonList = new List<string>();
+
+        using (var conn = new SqlConnection(connectionString))
+        using (var cmd = new SqlCommand(storedProcName, conn))
+        using (var adapter = new SqlDataAdapter(cmd))
+        {
+            cmd.CommandType = CommandType.StoredProcedure;
+
+            if (parameters != null)
+            {
+                foreach (var kvp in parameters)
+                {
+                    cmd.Parameters.AddWithValue(kvp.Key, kvp.Value ?? DBNull.Value);
+                }
+            }
+
+            var dataTable = new DataTable();
+            adapter.Fill(dataTable);
+
+            // Convert DataTable to JSON (simplified)
+            foreach (DataRow row in dataTable.Rows)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(row);
+                jsonList.Add(json);
+            }
+        }
+
+        return jsonList;
+    }
+}
+```
+
+### What Went Wrong?
+
+- **Memory Bloat**: All records were loaded into memory via the `DataTable`, and then materialized again using `.ToList()` or equivalent.
+- **Memory Limits**: .NET imposes limits on the size of in-memory objects, which vary depending on runtime and machine specifications.
+- **Environment-Specific Failures**: The code ran fine locally (on high-spec machines), but failed in non-production environments due to limited memory availability.
+
+
+### Solution: Stream Records Instead of Buffering
+
+To avoid loading everything into memory, we adopted **streaming** using the `SqlDataReader` class with `CommandBehavior.SequentialAccess`.
+
+We read **one record at a time** and wrote each JSON line directly to the output file, avoiding memory-heavy operations like `.ToList()`.
+
+---
+
+### Key Idea
+
+> Don’t materialize all results in memory.  
+> Instead, stream them row by row and process each record immediately.
+
+---
+
+### Streaming Code Using `yield return`
+
+```
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.IO;
+using System.Threading.Tasks;
+
+public class SqlJsonStreamer
+{
+    private readonly string _connectionString;
+
+    public SqlJsonStreamer(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    public IEnumerable<string> StreamJsonRows(string storedProcName, Dictionary<string, object> parameters = null)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand(storedProcName, connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        if (parameters != null)
+        {
+            foreach (var kvp in parameters)
+            {
+                command.Parameters.AddWithValue(kvp.Key, kvp.Value ?? DBNull.Value);
+            }
+        }
+
+        connection.Open();
+        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+
+        while (reader.Read())
+        {
+            yield return reader.GetString(0); // Assumes JSON string is in the first column
+        }
+    }
+
+    public async Task WriteJsonToFileAsync(string storedProcName, string outputFilePath, Dictionary<string, object> parameters = null)
+    {
+        using var writer = new StreamWriter(outputFilePath, false);
+
+        foreach (var jsonRow in StreamJsonRows(storedProcName, parameters))
+        {
+            await writer.WriteLineAsync(jsonRow);
+        }
+    }
+}
+
+```
+
+### Advantages of the Streaming Approach
+
+- **Memory Efficient**: Only one record is held in memory at a time.
+- **Scalable**: Easily handles millions of records.
+- **Predictable Behavior**: Works consistently across environments regardless of hardware specs.
+
+---
+
+### Alternative: SQL-Level Batching
+
+If you need to process records **in memory** (e.g., for sorting or joining), consider **batching at the SQL level**:
+
+- Add a parameter for page number or range.
+- Use `OFFSET` and `FETCH NEXT` clauses (SQL Server 2012+).
+- Fetch batches of 10k or 50k records at a time in a loop from your C# code.
+
+This lets you limit memory usage while still processing data in blocks.
+
+---
+
+### Final Thoughts
+
+When dealing with **large datasets**, it’s essential to optimize for **memory usage** and favor **streaming** over full materialization.
+
+Use:
+
+- `SqlDataReader` with `SequentialAccess` to stream row-by-row
+- `yield return` to expose data as an iterator
+- File I/O in a streaming fashion to avoid buffering in memory
+
+This pattern is especially useful for:
+
+- ETL pipelines  
+- Reporting systems  
+- File exporters handling hundreds of thousands of records
